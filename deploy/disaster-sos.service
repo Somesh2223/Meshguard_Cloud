@@ -1,0 +1,25 @@
+[Unit]
+Description=Disaster SOS rescue coordination server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=__APP_USER__
+WorkingDirectory=__APP_DIR__/server
+EnvironmentFile=/etc/disaster-sos/env
+Environment=NODE_ENV=production
+Environment=STATIC_DIR=__APP_DIR__/client/dist
+ExecStart=/usr/bin/node --disable-warning=ExperimentalWarning src/server.js
+# Restart automatically if the process crashes, and after a reboot.
+Restart=always
+RestartSec=3
+# Hardening: the service can only write to its data folder.
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=__APP_DIR__/server/data
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
