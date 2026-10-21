@@ -22,9 +22,11 @@ export function SosMap({ sos, selectedId, onSelect }: SosMapProps) {
 
     useEffect(() => {
         const map = L.map(containerRef.current!, { zoomControl: true }).setView(DEFAULT_CENTER, 5);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        // OSM's tile policy requires a Referer header and the single tile host.
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19,
-            attribution: '&copy; OpenStreetMap contributors',
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+            referrerPolicy: 'strict-origin-when-cross-origin',
         }).addTo(map);
         mapRef.current = map;
         layerRef.current = L.layerGroup().addTo(map);

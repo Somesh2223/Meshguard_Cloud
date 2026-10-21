@@ -7,6 +7,7 @@ __DOMAIN__ {
 	header {
 		Strict-Transport-Security "max-age=31536000"
 		X-Content-Type-Options "nosniff"
-		Referrer-Policy "no-referrer"
+		# OpenStreetMap tiles require a Referer; this sends only the site's origin.
+		Referrer-Policy "strict-origin-when-cross-origin"
 	}
 }
