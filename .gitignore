@@ -7,3 +7,4 @@ server/backups/
 .DS_Store
 *.pem
 *.key
+docs/screenshots/
