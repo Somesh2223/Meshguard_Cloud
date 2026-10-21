@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
-# Pull the latest code, rebuild and restart. Run on the EC2 instance: bash deploy/update.sh
+# Rebuild and restart after new code arrives (git pull, or a re-uploaded archive).
+# Run on the EC2 instance: bash deploy/update.sh
 set -euo pipefail
 cd "$(dirname "$0")/.."
-git pull --ff-only
+if [ -d .git ]; then git pull --ff-only; fi
 (cd client && npm ci && npm run build)
 (cd server && npm ci --omit=dev)
 sudo systemctl restart disaster-sos
