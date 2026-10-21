@@ -22,6 +22,16 @@ PUBLIC_IP=$(curl -sf -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.25
 DOMAIN="${DOMAIN:-${PUBLIC_IP//./-}.sslip.io}"
 echo "==> Setting up for https://$DOMAIN"
 
+# Free-tier instances have 1 GB RAM; the frontend build needs more, so add swap.
+if [[ ! -f /swapfile ]] && (( $(awk '/MemTotal/ {print $2}' /proc/meminfo) < 2000000 )); then
+    echo "==> Adding 2 GB swap (small instance)"
+    fallocate -l 2G /swapfile
+    chmod 600 /swapfile
+    mkswap /swapfile
+    swapon /swapfile
+    echo '/swapfile none swap sw 0 0' >> /etc/fstab
+fi
+
 echo "==> Installing Node.js 24, Caddy and build tools"
 apt-get update -y
 apt-get install -y curl ca-certificates gnupg debian-keyring debian-archive-keyring apt-transport-https
