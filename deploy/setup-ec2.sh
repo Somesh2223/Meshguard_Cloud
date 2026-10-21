@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# One-time setup of the Disaster SOS system on a fresh Ubuntu 24.04 EC2 instance.
+# One-time setup of the Disaster SOS system on a fresh Ubuntu EC2 instance.
 #
+# Targets Ubuntu 24.04 / 26.04 LTS.
 # Usage (on the instance, from the project folder):
 #   sudo DASHBOARD_KEY='choose-a-strong-passcode' bash deploy/setup-ec2.sh
 #
@@ -34,7 +35,7 @@ fi
 
 echo "==> Installing Node.js 24, Caddy and build tools"
 apt-get update -y
-apt-get install -y curl ca-certificates gnupg debian-keyring debian-archive-keyring apt-transport-https
+apt-get install -y curl ca-certificates gnupg
 curl -fsSL https://deb.nodesource.com/setup_24.x | bash -
 apt-get install -y nodejs
 curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | gpg --dearmor --yes -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
