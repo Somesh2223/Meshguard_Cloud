@@ -4,7 +4,7 @@ import { offlineStorage } from '../services/OfflineStorage';
 import { p2pMesh } from '../network/P2pMesh';
 import { syncService, type CloudState } from '../services/SyncService';
 import { deviceId } from '../utils/deviceId';
-import { locationService, startLocationIfPermitted, type GpsState } from '../services/LocationService';
+import { locationService, startLocationIfPermitted, type GpsError, type GpsState } from '../services/LocationService';
 
 export interface SendSOSOptions {
     isAuto?: boolean;
@@ -23,6 +23,7 @@ export const useSOS = () => {
     const [isOnline, setIsOnline] = useState(navigator.onLine);
     const [cloudState, setCloudState] = useState<CloudState>('offline');
     const [gpsState, setGpsState] = useState<GpsState>(locationService.getState());
+    const [gpsError, setGpsError] = useState<GpsError | null>(null);
 
     useEffect(() => {
         const upsert = (msg: SOSMessage) =>
@@ -53,7 +54,10 @@ export const useSOS = () => {
         syncService.start();
 
         startLocationIfPermitted();
-        const stopGps = locationService.onStateChange(setGpsState);
+        const stopGps = locationService.onStateChange(s => {
+            setGpsState(s);
+            setGpsError(locationService.getError());
+        });
 
         const handleStatus = () => setIsOnline(navigator.onLine);
         window.addEventListener('online', handleStatus);
@@ -144,6 +148,7 @@ export const useSOS = () => {
     };
 
     const enableGps = () => locationService.start();
+    const retryGps = (draft: string) => locationService.retry(draft);
 
-    return { messages, isOnline, cloudState, gpsState, enableGps, sendSOS, sendTestMessage };
+    return { messages, isOnline, cloudState, gpsState, gpsError, enableGps, retryGps, sendSOS, sendTestMessage };
 };
