@@ -65,7 +65,7 @@ deploy/                 EC2 setup script, systemd unit, Caddy config, update scr
 ## Deploying on AWS EC2
 
 1. **Launch an instance** (EC2 console → Launch instance)
-   - AMI: **Ubuntu Server 24.04 LTS**, type **t2.micro / t3.micro** (free tier), 8–16 GB gp3 storage
+   - AMI: **Ubuntu Server 26.04 LTS** (24.04 also works), type **t2.micro / t3.micro** (free tier), 8–16 GB gp3 storage
    - Key pair: create one and download the `.pem`
    - **Security group** inbound rules: SSH 22 (My IP only), HTTP 80 (anywhere), HTTPS 443 (anywhere)
 2. **Allocate an Elastic IP** and associate it with the instance, so the address survives restarts.

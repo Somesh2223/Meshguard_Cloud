@@ -33,14 +33,26 @@ if [[ ! -f /swapfile ]] && (( $(awk '/MemTotal/ {print $2}' /proc/meminfo) < 200
     echo '/swapfile none swap sw 0 0' >> /etc/fstab
 fi
 
-echo "==> Installing Node.js 24, Caddy and build tools"
+echo "==> Installing Node.js, Caddy and sqlite3"
 apt-get update -y
-apt-get install -y curl ca-certificates gnupg
-curl -fsSL https://deb.nodesource.com/setup_24.x | bash -
-apt-get install -y nodejs
-curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | gpg --dearmor --yes -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
-curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' > /etc/apt/sources.list.d/caddy-stable.list
-apt-get update -y
+apt-get install -y curl ca-certificates gnupg sqlite3
+
+# The server needs Node.js 22.13+ (built-in node:sqlite). Prefer NodeSource's
+# Node 24; if its repository is unavailable for this Ubuntu release, fall back
+# to Ubuntu's own package and check that it is new enough.
+if ! { curl -fsSL https://deb.nodesource.com/setup_24.x | bash - && apt-get install -y nodejs; }; then
+    echo "==> NodeSource unavailable; using Ubuntu's Node.js"
+    rm -f /etc/apt/sources.list.d/nodesource.list /etc/apt/sources.list.d/nodesource.sources
+    apt-get update -y
+    apt-get install -y nodejs npm
+fi
+if ! node -e 'const [a,b]=process.versions.node.split(".").map(Number); process.exit(a>22||(a===22&&b>=13)?0:1)'; then
+    echo "Node.js $(node -v) is too old; 22.13 or newer is required." >&2
+    exit 1
+fi
+echo "    Node.js $(node -v), npm $(npm -v)"
+
+# Ubuntu's archive ships Caddy, so no third-party repository is needed.
 apt-get install -y caddy
 
 echo "==> Building the victim app and rescuer dashboard"
@@ -71,7 +83,6 @@ echo "==> Daily database backup at 02:00 (kept 7 days)"
 cat > /etc/cron.d/disaster-sos-backup <<EOF
 0 2 * * * $APP_USER mkdir -p $APP_DIR/server/backups && sqlite3 $APP_DIR/server/data/sos.db ".backup '$APP_DIR/server/backups/sos-\$(date +\%F).db'" && find $APP_DIR/server/backups -name 'sos-*.db' -mtime +7 -delete
 EOF
-apt-get install -y sqlite3
 
 sleep 2
 if curl -sf http://127.0.0.1:8080/api/health > /dev/null; then
