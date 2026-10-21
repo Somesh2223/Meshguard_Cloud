@@ -11,7 +11,7 @@ import { triggerAlertFeedback } from './utils/alertFeedback';
 import { LayoutDashboard, Settings as SettingsIcon, MessageSquare, QrCode, Camera, Radio } from 'lucide-react';
 
 function App() {
-  const { messages, isOnline, cloudState, sendSOS, sendTestMessage } = useSOS();
+  const { messages, isOnline, cloudState, gpsState, enableGps, sendSOS, sendTestMessage } = useSOS();
   const [activeTab, setActiveTab] = useState<'dashboard' | 'messages' | 'settings'>('dashboard');
   const [fallDetectionOn, setFallDetectionOn] = useState(false);
   const [pairingAction, setPairingAction] = useState<'generate' | 'scan' | null>(null);
@@ -74,7 +74,7 @@ function App() {
               </p>
             </div>
 
-            <SosForm onSend={(text) => sendSOS(text)} />
+            <SosForm onSend={(text) => sendSOS(text)} gpsState={gpsState} onEnableGps={enableGps} />
 
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

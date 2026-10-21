@@ -108,13 +108,22 @@ export function createRepository(db) {
         ON CONFLICT(id) DO NOTHING
     `);
     const getSos = db.prepare(`${SOS_SELECT} WHERE s.id = ?`);
+    // A phone sends the SOS first and its GPS fix later; fill it in once.
+    const addLocation = db.prepare(`
+        UPDATE sos SET latitude = ?, longitude = ?, accuracy = ?, updated_at = ?
+        WHERE id = ? AND latitude IS NULL
+    `);
     const insertEvent = db.prepare('INSERT INTO events (sos_id, at, action, detail) VALUES (?, ?, ?, ?)');
 
     return {
-        /** Inserts new SOS messages; duplicates (same id relayed by several phones) are ignored. */
+        /**
+         * Inserts new SOS messages. Duplicates (same id relayed by several phones)
+         * are ignored, except that a location arriving later fills in a missing one.
+         */
         ingest(messages, uploadedBy) {
             const now = Date.now();
             const created = [];
+            const updated = [];
             db.exec('BEGIN');
             try {
                 for (const m of messages) {
@@ -125,20 +134,26 @@ export function createRepository(db) {
                         m.fallSeverity ?? null, m.fallImpact ?? null, m.senderId, m.hops ?? 0,
                         uploadedBy ?? null, computePriority(m), now,
                     );
-                    if (result.changes > 0) {
-                        const via = uploadedBy && uploadedBy !== m.senderId
-                            ? `relayed by ${uploadedBy} after ${m.hops} hop(s)`
-                            : 'uploaded directly by sender';
-                        insertEvent.run(m.id, now, 'received', via);
-                        created.push(toApiSos(getSos.get(m.id)));
+                    if (result.changes === 0) {
+                        if (m.location && addLocation.run(loc.latitude, loc.longitude, loc.accuracy ?? null, now, m.id).changes > 0) {
+                            insertEvent.run(m.id, now, 'location',
+                                `GPS fix received (±${Math.round(loc.accuracy ?? 0)} m)`);
+                            updated.push(toApiSos(getSos.get(m.id)));
+                        }
+                        continue;
                     }
+                    const via = uploadedBy && uploadedBy !== m.senderId
+                        ? `relayed by ${uploadedBy} after ${m.hops} hop(s)`
+                        : 'uploaded directly by sender';
+                    insertEvent.run(m.id, now, 'received', via);
+                    created.push(toApiSos(getSos.get(m.id)));
                 }
                 db.exec('COMMIT');
             } catch (err) {
                 db.exec('ROLLBACK');
                 throw err;
             }
-            return created;
+            return { created, updated };
         },
 
         listSos({ status } = {}) {

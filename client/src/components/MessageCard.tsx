@@ -88,10 +88,20 @@ export const MessageCard: React.FC<MessageCardProps> = ({ message }) => {
                     <div className="w-1.5 h-1.5 rounded-full bg-blue-500/50" />
                     Network Hops: {message.hops}
                 </div>
-                {message.location && (
+                {message.location ? (
                     <div className="flex items-center gap-1.5 text-blue-400/80">
                         <MapPin className="w-3 h-3" />
                         Loc: {message.location.latitude.toFixed(3)}, {message.location.longitude.toFixed(3)}
+                    </div>
+                ) : message.locationStatus === 'pending' ? (
+                    <div className="flex items-center gap-1.5 text-amber-400/80 animate-pulse">
+                        <MapPin className="w-3 h-3" />
+                        Locating…
+                    </div>
+                ) : !message.isTest && (
+                    <div className="flex items-center gap-1.5 text-red-400/70">
+                        <MapPin className="w-3 h-3" />
+                        No location
                     </div>
                 )}
             </div>

@@ -4,6 +4,7 @@ import { offlineStorage } from '../services/OfflineStorage';
 import { p2pMesh } from '../network/P2pMesh';
 import { syncService, type CloudState } from '../services/SyncService';
 import { deviceId } from '../utils/deviceId';
+import { locationService, startLocationIfPermitted, type GpsState } from '../services/LocationService';
 
 export interface SendSOSOptions {
     isAuto?: boolean;
@@ -21,6 +22,7 @@ export const useSOS = () => {
     const [messages, setMessages] = useState<SOSMessage[]>([]);
     const [isOnline, setIsOnline] = useState(navigator.onLine);
     const [cloudState, setCloudState] = useState<CloudState>('offline');
+    const [gpsState, setGpsState] = useState<GpsState>(locationService.getState());
 
     useEffect(() => {
         const upsert = (msg: SOSMessage) =>
@@ -50,11 +52,15 @@ export const useSOS = () => {
         syncService.onStateChange(setCloudState);
         syncService.start();
 
+        startLocationIfPermitted();
+        const stopGps = locationService.onStateChange(setGpsState);
+
         const handleStatus = () => setIsOnline(navigator.onLine);
         window.addEventListener('online', handleStatus);
         window.addEventListener('offline', handleStatus);
 
         return () => {
+            stopGps();
             window.removeEventListener('online', handleStatus);
             window.removeEventListener('offline', handleStatus);
         };
@@ -74,19 +80,11 @@ export const useSOS = () => {
             hops: 0,
         };
 
-        // Get location if possible
-        try {
-            const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
-                navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 5000 });
-            });
-            message.location = {
-                latitude: pos.coords.latitude,
-                longitude: pos.coords.longitude,
-                accuracy: pos.coords.accuracy,
-            };
-        } catch (err) {
-            console.warn('Location retrieval failed or denied', err);
-        }
+        // Never hold an SOS back waiting for GPS: send now with the latest fix,
+        // and if there isn't a fresh one, follow up with the location below.
+        locationService.start();
+        message.location = locationService.current();
+        if (!message.location) message.locationStatus = 'pending';
 
         await offlineStorage.saveMessage(message);
         setMessages(prev => [message, ...prev]);
@@ -102,7 +100,23 @@ export const useSOS = () => {
             console.log('[useSOS] No peers connected, message queued locally');
         }
 
+        if (!message.location) attachLateLocation(message.id);
         return message;
+    };
+
+    const attachLateLocation = async (id: string) => {
+        const fix = await locationService.waitForFix();
+        const stored = await offlineStorage.getMessage(id);
+        if (!stored || stored.location) return;
+        const next: SOSMessage = fix
+            ? { ...stored, location: fix, locationStatus: undefined, cloudSynced: false }
+            : { ...stored, locationStatus: 'none' };
+        await offlineStorage.saveMessage(next);
+        setMessages(prev => prev.map(m => (m.id === id ? next : m)));
+        if (fix) {
+            syncService.syncPending();
+            if (p2pMesh.getPeerCount() > 0) p2pMesh.broadcast(next);
+        }
     };
 
     const sendTestMessage = async () => {
@@ -129,5 +143,7 @@ export const useSOS = () => {
         return testMessage;
     };
 
-    return { messages, isOnline, cloudState, sendSOS, sendTestMessage };
+    const enableGps = () => locationService.start();
+
+    return { messages, isOnline, cloudState, gpsState, enableGps, sendSOS, sendTestMessage };
 };

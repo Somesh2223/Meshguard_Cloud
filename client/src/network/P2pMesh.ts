@@ -238,9 +238,17 @@ export class P2pMesh {
 
     private async handleIncomingMessage(message: SOSMessage, fromPeerId: string) {
         try {
-            // Prevent duplicate processing
-            if (await offlineStorage.getMessage(message.id)) {
-                console.log('[P2pMesh] Duplicate message ignored:', message.id);
+            // Prevent duplicate processing, except a location that arrived after the SOS
+            const existing = await offlineStorage.getMessage(message.id);
+            if (existing) {
+                if (existing.location || !message.location) {
+                    console.log('[P2pMesh] Duplicate message ignored:', message.id);
+                    return;
+                }
+                message = { ...existing, location: message.location, locationStatus: undefined, cloudSynced: false };
+                await offlineStorage.saveMessage(message);
+                this.onMessageCallbacks.forEach(cb => { try { cb(message); } catch { /* ignore */ } });
+                if (message.hops < 5) this.broadcast(message, [fromPeerId]);
                 return;
             }
 

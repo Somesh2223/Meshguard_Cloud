@@ -27,6 +27,8 @@ export interface SOSMessage {
     fallImpact?: number;
     senderId: string;
     hops: number;
+    /** 'pending' while GPS is still looking after the SOS was sent; 'none' if it gave up. */
+    locationStatus?: 'pending' | 'none';
     /** Local-only test messages are never uploaded to the rescue server. */
     isTest?: boolean;
     /** True once the cloud server has stored this message. */

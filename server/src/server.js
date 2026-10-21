@@ -113,8 +113,9 @@ app.post('/api/sos', (req, res) => {
         const err = validateSos(m);
         if (err) return res.status(400).json({ error: `${m?.id ?? 'message'}: ${err}` });
     }
-    const created = repo.ingest(messages, isString(deviceId, 100) ? deviceId : null);
+    const { created, updated } = repo.ingest(messages, isString(deviceId, 100) ? deviceId : null);
     for (const sos of created) broadcast('sos:new', sos);
+    for (const sos of updated) broadcast('sos:update', sos);
     res.status(201).json({
         accepted: messages.map(m => m.id),
         statuses: repo.publicStatus(messages.map(m => m.id)),

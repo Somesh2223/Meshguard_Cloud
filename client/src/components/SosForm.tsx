@@ -1,11 +1,23 @@
 import React, { useState } from 'react';
 import { Send, MapPin, AlertTriangle } from 'lucide-react';
+import type { GpsState } from '../services/LocationService';
+
+const GPS_LABEL: Record<GpsState, { text: string; dot: string }> = {
+    ok: { text: 'GPS location ready', dot: 'bg-green-500' },
+    searching: { text: 'Finding your location…', dot: 'bg-amber-400 animate-pulse' },
+    idle: { text: 'Tap to share your location', dot: 'bg-slate-500' },
+    unavailable: { text: 'No GPS signal yet; try near a window', dot: 'bg-amber-500 animate-pulse' },
+    denied: { text: 'Location blocked: allow it for this site in browser settings', dot: 'bg-red-500' },
+    unsupported: { text: 'Location not supported on this device', dot: 'bg-red-500' },
+};
 
 interface SosFormProps {
     onSend: (text: string) => void;
+    gpsState: GpsState;
+    onEnableGps: () => void;
 }
 
-export const SosForm: React.FC<SosFormProps> = ({ onSend }) => {
+export const SosForm: React.FC<SosFormProps> = ({ onSend, gpsState, onEnableGps }) => {
     const [text, setText] = useState('');
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -32,16 +44,21 @@ export const SosForm: React.FC<SosFormProps> = ({ onSend }) => {
                 <textarea
                     value={text}
                     onChange={(e) => setText(e.target.value)}
+                    onFocus={onEnableGps}
                     placeholder="What is your emergency?"
                     className="w-full bg-slate-950/50 border border-slate-800 rounded-[1.5rem] p-5 text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-red-500/30 focus:border-red-500/50 transition-all min-h-[140px] text-lg resize-none shadow-inner"
                 />
 
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-1">
-                    <div className="flex items-center gap-2 text-sm font-medium text-slate-500">
-                        <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-                        <MapPin className="w-4 h-4" />
-                        <span>GPS Tracking Active</span>
-                    </div>
+                    <button
+                        type="button"
+                        onClick={onEnableGps}
+                        className="flex items-center gap-2 text-sm font-medium text-slate-400 text-left"
+                    >
+                        <div className={`w-2 h-2 shrink-0 rounded-full ${GPS_LABEL[gpsState].dot}`} />
+                        <MapPin className="w-4 h-4 shrink-0" />
+                        <span>{GPS_LABEL[gpsState].text}</span>
+                    </button>
 
                     <button
                         type="submit"
