@@ -12,6 +12,10 @@ A two-part emergency system for disasters where mobile networks fail:
    see new SOS calls instantly, assign teams, and update status ("Team en route", "Rescued"). The
    status flows back to the victim's phone in real time.
 
+**Earlier development:** the MeshGuard victim app was first built in a separate repository,
+[Somesh2223/Meshguard](https://github.com/Somesh2223/Meshguard), which has its commit history from
+before the AWS version. This repository adds the cloud backend, the rescuer dashboard and the EC2 deployment.
+
 ## Architecture
 
 ```
